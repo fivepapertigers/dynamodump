@@ -9,6 +9,7 @@
 """
 
 import argparse
+import copy
 import fnmatch
 import json
 import logging
@@ -660,11 +661,10 @@ def do_restore(dynamo, sleep_interval, source_table, destination_table, write_ca
 
     # override GSI write capacities if specified, else use RESTORE_WRITE_CAPACITY if original
     # write capacity is lower
-    original_gsi_write_capacities = []
-    if table_global_secondary_indexes is not None:
-        for gsi in table_global_secondary_indexes:
-            original_gsi_write_capacities.append(gsi["ProvisionedThroughput"]["WriteCapacityUnits"])
 
+    table_provisioned_gsi = copy.deepcopy(table_global_secondary_indexes)
+    if table_provisioned_gsi is not None:
+        for gsi in table_provisioned_gsi:
             if gsi["ProvisionedThroughput"]["WriteCapacityUnits"] < int(write_capacity):
                 gsi["ProvisionedThroughput"]["WriteCapacityUnits"] = int(write_capacity)
 
@@ -752,17 +752,20 @@ def do_restore(dynamo, sleep_interval, source_table, destination_table, write_ca
             if table_global_secondary_indexes is not None:
                 gsi_data = []
                 for gsi in table_global_secondary_indexes:
-                    wcu = gsi["ProvisionedThroughput"]["WriteCapacityUnits"]
-                    rcu = gsi["ProvisionedThroughput"]["ReadCapacityUnits"]
-                    original_gsi_write_capacity = original_gsi_write_capacities.pop(0)
-                    if original_gsi_write_capacity != wcu:
+                    original_wcu = gsi["ProvisionedThroughput"]["WriteCapacityUnits"]
+                    original_rcu = gsi["ProvisionedThroughput"]["ReadCapacityUnits"]
+
+                    provisioned_gsi = table_provisioned_gsi.pop(0)
+                    temporary_wcu = provisioned_gsi["ProvisionedThroughput"]["WriteCapacityUnits"]
+                    temporary_rcu = provisioned_gsi["ProvisionedThroughput"]["ReadCapacityUnits"]
+
+                    if original_wcu != temporary_wcu or original_rcu != temporary_rcu:
                         gsi_data.append({
                             "Update": {
                                 "IndexName": gsi["IndexName"],
                                 "ProvisionedThroughput": {
-                                    "ReadCapacityUnits":
-                                        int(rcu),
-                                    "WriteCapacityUnits": int(original_gsi_write_capacity)
+                                    "ReadCapacityUnits": int(original_rcu),
+                                    "WriteCapacityUnits": int(original_wcu),
                                 }
                             }
                         })
