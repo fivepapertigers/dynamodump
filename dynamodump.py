@@ -470,6 +470,9 @@ def update_provisioned_throughput(conn, table_name, read_capacity, write_capacit
                 logging.info("Control plane limit exceeded, retrying updating throughput"
                              "of " + table_name + "..")
                 time.sleep(sleep_interval)
+            elif (e.body["__type"] == "com.amazon.coral.validate#ValidationException" and
+                  "The requested value equals the current value." in e.message):
+                break
             else:
                 logging.exception("Failed to update table")
                 sys.exit(1)
@@ -781,6 +784,9 @@ def do_restore(dynamo, sleep_interval, source_table, destination_table, write_ca
                                 "Control plane limit exceeded, retrying updating throughput of"
                                 "GlobalSecondaryIndexes in " + destination_table + "..")
                             time.sleep(sleep_interval)
+                        elif (e.body["__type"] == "com.amazon.coral.validate#ValidationException" and
+                              "The requested value equals the current value." in e.message):
+                            break
                         else:
                             logging.exception("Failed to update table")
                             sys.exit(1)
