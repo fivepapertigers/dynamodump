@@ -772,7 +772,7 @@ def do_restore(dynamo, sleep_interval, source_table, destination_table, write_ca
 
                 logging.info("Updating " + destination_table +
                              " global secondary indexes write capacities as necessary..")
-                while True:
+                while gsi_data:
                     try:
                         dynamo.update_table(destination_table,
                                             global_secondary_index_updates=gsi_data)
